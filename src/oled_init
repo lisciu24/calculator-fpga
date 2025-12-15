@@ -24,7 +24,7 @@ module oled_init (
   e_state current_state;
   e_state next_state;
   
-  localparam CMD_COUNT = 21;
+  localparam CMD_COUNT = 19;
   localparam NCMD = $clog2(CMD_COUNT);
   // 2 bit cmd type and 8 bit command
   // 00 - spi, 01 - power, 10 - delay
@@ -46,9 +46,7 @@ module oled_init (
     10'h0A1, // SPI set segment remap, column address 127 is mapped to SEG0
     10'h0C8, // SPI set COM output scan direction, remapped mode
     10'h0DA, // SPI set COM pins hardware configuration >
-    10'h012, // SPI alternative COM pin configuration, disable COM left/right remap
-    10'h020, // SPI set memory addressing mode >
-    10'h002, // SPI page addressing mode
+    10'h022, // SPI sequential COM pin configuration, enable COM left/right remap
     10'h0AF  // SPI display on
   };
   
