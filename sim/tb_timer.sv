@@ -10,17 +10,17 @@ module tb_timer;
   logic valid;
   logic ready;
   logic [nb-1:0] timer_ms;
-  logic timer_fin;
+  logic fin;
 
   timer #(
-    .clk_Hz(clk_Hz), .nb(nb)
+    .CLK_Hz(clk_Hz), .NB(nb)
   ) dut (
     .i_CLK(clk),
     .i_RST(rst),
     .i_VALID(valid),
     .o_READY(ready),
     .i_TIMER_MS(timer_ms),
-    .o_TIMER_FIN(timer_fin)
+    .o_FIN(fin)
   );
 
   initial begin
@@ -35,9 +35,10 @@ module tb_timer;
     rst = 1;
     #20;
     rst = 0;
-    #10
-	valid = 1;
-    wait(timer_fin)
+    valid = 1;
+    #20
+    valid = 0;
+    wait(fin)
     #200
     valid = 0;
 
