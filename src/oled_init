@@ -24,30 +24,32 @@ module oled_init (
   e_state current_state;
   e_state next_state;
   
-  localparam CMD_COUNT = 19;
+  localparam CMD_COUNT = 21;
   localparam NCMD = $clog2(CMD_COUNT);
   // 2 bit cmd type and 8 bit command
   // 00 - spi, 01 - power, 10 - delay
   localparam reg [9:0] CMD_SEQ [0:CMD_COUNT-1] = '{ 
     10'h140, // VDD = 0 
     10'h201, // delay 1ms
-    10'h0AE, 
+    10'h0AE, // SPI display off
     10'h110, // RES = 0
     10'h201, // delay 1ms
     10'h11F, // RES = 1
-    10'h08D, 
-    10'h014, 
-    10'h0D9,
-    10'h0F1,
+    10'h08D, // SPI set charge pump >
+    10'h014, // SPI enable
+    10'h0D9, // SPI set charge pump period > 
+    10'h0F1, // SPI phase 1 - 15 DCLK, phase 2 - 1 DCLK
     10'h120, // VBAT = 0
     10'h264, // delay 100ms
-    10'h081,
-    10'h00F,
-    10'h0A1,
-    10'h0C8,
-    10'h0DA,
-    10'h020,
-    10'h0AF
+    10'h081, // SPI set contrast >
+    10'h00F, // SPI 15 / 255
+    10'h0A1, // SPI set segment remap, column address 127 is mapped to SEG0
+    10'h0C8, // SPI set COM output scan direction, remapped mode
+    10'h0DA, // SPI set COM pins hardware configuration >
+    10'h012, // SPI alternative COM pin configuration, disable COM left/right remap
+    10'h020, // SPI set memory addressing mode >
+    10'h002, // SPI page addressing mode
+    10'h0AF  // SPI display on
   };
   
   reg [1:0] r_cmd_type; // 0 -> spi / 1 -> signal
