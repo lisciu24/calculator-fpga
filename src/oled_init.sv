@@ -1,6 +1,3 @@
-`include "timer.sv"
-`include "spi_mosi.sv"
-
 module oled_init (
   input i_CLK,
   input i_RST,
@@ -24,11 +21,13 @@ module oled_init (
   e_state current_state;
   e_state next_state;
   
-  localparam CMD_COUNT = 19;
+  localparam CMD_COUNT = 20;
   localparam NCMD = $clog2(CMD_COUNT);
+
   // 2 bit cmd type and 8 bit command
   // 00 - spi, 01 - power, 10 - delay
-  localparam reg [9:0] CMD_SEQ [0:CMD_COUNT-1] = '{ 
+  localparam reg [9:0] CMD_INIT_SEQ [0:CMD_COUNT-1] = '{ 
+    10'h180, // DC = 0
     10'h140, // VDD = 0 
     10'h201, // delay 1ms
     10'h0AE, // SPI display off
@@ -121,8 +120,8 @@ module oled_init (
       r_ccmd <= 0;
       r_cmd_type <= 0;
     end else if(next_state == Decision) begin
-      r_cmd_type <= CMD_SEQ[r_cmd_cnt][9:8];
-      r_ccmd <= CMD_SEQ[r_cmd_cnt][7:0];
+      r_cmd_type <= CMD_INIT_SEQ[r_cmd_cnt][9:8];
+      r_ccmd <= CMD_INIT_SEQ[r_cmd_cnt][7:0];
     end
   end
   
@@ -157,7 +156,7 @@ module oled_init (
   // power 
   always_ff @(posedge i_CLK) begin
     if(i_RST) begin
-      r_power <= 4'b0111;
+      r_power <= 4'b1111;
     end else if(current_state == Power) begin
       r_power <= (r_ccmd[7:4] & r_ccmd[3:0]) | (~r_ccmd[7:4] & r_power);
     end
