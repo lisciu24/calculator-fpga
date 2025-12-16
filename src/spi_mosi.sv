@@ -1,6 +1,6 @@
 module spi_mosi #(
   parameter CLK_Hz = 100_000_000,
-  parameter SPI_CLK_Hz = 10_000_000,
+  parameter SPI_CLK_Hz = 5_000_000,
   parameter SPI_MODE = 2'b00,
   parameter DATA_BS = 8
 ) (
