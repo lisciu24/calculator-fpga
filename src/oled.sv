@@ -1,7 +1,3 @@
-`include "timer.sv"
-`include "spi_mosi.sv"
-`include "memory.sv"
-
 module oled #(
   parameter PAGE_COUNT = 4,
   parameter COL_COUNT = 128,
