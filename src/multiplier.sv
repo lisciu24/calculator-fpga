@@ -5,12 +5,11 @@ module multiplier #(
   input signed [NB-1:0] i_DATA_A,
   input signed [NB-1:0] i_DATA_B,
 
-  output [NB-1:0] o_RESULT,
-  output o_OVFL
+  output reg [NB-1:0] o_RESULT,
+  output reg o_OVFL
 );
 
   reg signed [(2*NB)-1:0] r_full_res;
-  reg r_ovfl;
 
   always_comb begin
     r_full_res = i_DATA_A * i_DATA_B;
