@@ -50,6 +50,8 @@ module top #(
   );
 
   logic [NB-1:0] exec_data_A, exec_data_B, exec_result;
+  logic [$clog2(DIGITS):0] comma_data_A, comma_data_B, comma_result;
+  logic comma_digit;
   e_opcode exec_opcode;
   logic exec_ovfl; 
   execution_unit #(
@@ -148,6 +150,8 @@ module top #(
     KeyDigit, 
     KeyOp,
     KeyClear,
+    KeyComma,
+    AlignComma,
     Calc,
     Convert,
     ClearMem,
@@ -164,6 +168,9 @@ module top #(
   e_opcode next_op;
   logic shift_result;
   logic [$clog2(DIGITS)-1:0] result_cnt;
+  logic print_comma;
+  logic align_fin;
+  assign align_fin = (comma_data_A == comma_data_B);
 
   always_ff @(posedge i_CLK) begin
     if(i_RST) current_state <= Init;
@@ -179,14 +186,17 @@ module top #(
       Decide: begin
         if(is_digit(key_code)) next_state = KeyDigit;
         else if(key_code == KEY_CLEAR) next_state = KeyClear;
+        else if(key_code == KEY_COMMA) next_state = KeyComma;
         else next_state = KeyOp;
       end
       KeyDigit: next_state = Flush; 
       KeyOp: begin
-        if(load_reg == 1'b1) next_state = Calc;
+        if(load_reg == 1'b1) next_state = AlignComma;
         else next_state = Flush;
       end
       KeyClear: next_state = WaitKey;
+      KeyComma: next_state = Flush;
+      AlignComma: if(align_fin) next_state = Calc;
       Calc: next_state = Convert;
       Convert: if(bin_fin) next_state = ClearMem;
       ClearMem: next_state = SetResultCursor;
@@ -208,7 +218,22 @@ module top #(
       load_reg <= 0;
       shift_result <= 0;
       next_op <= OP_PASS_A;
+      comma_digit <= 0;
+      comma_data_A <= 0;
+      comma_data_B <= 0;
+      comma_result <= 0;
+    end else if(current_state == KeyComma) begin
+      comma_digit <= 1;
+    end else if(current_state == KeyDigit) begin
+      if(comma_digit) begin
+        if(load_reg == 1'b0) begin
+          comma_data_A <= comma_data_A + 1;
+        end else begin
+          comma_data_B <= comma_data_B + 1;
+        end
+      end
     end else if(current_state == KeyOp) begin
+      comma_digit <= 0;
       if(load_reg == 1'b0) begin
         exec_data_A <= bcd_bin;
         load_reg <= 1;
@@ -224,11 +249,25 @@ module top #(
         KEY_EQUAL: next_op <= next_op;
         default: next_op <= OP_PASS_A;
       endcase
+    end else if(current_state == AlignComma) begin
+      if(comma_data_A > comma_data_B) begin
+        exec_data_B <= (exec_data_B << 3) + (exec_data_B << 1);
+        comma_data_B <= comma_data_B + 1;
+      end else if(comma_data_B > comma_data_A) begin
+        exec_data_A <= (exec_data_A << 3) + (exec_data_A << 1);
+        comma_data_A <= comma_data_A + 1;
+      end
     end else if(current_state == Calc) begin
+      case(exec_opcode)
+        OP_ADD, OP_SUB: comma_result <= comma_data_A;
+        OP_MULT: comma_result <= comma_data_A << 1;
+      endcase
       shift_result <= 1;
     end else if(current_state == Convert) begin
       if(shift_result == 1'b1) begin
         exec_data_A <= exec_result;
+        comma_data_A <= comma_result;
+        comma_data_B <= 0;
         shift_result <= 0;
       end
     end
@@ -240,7 +279,7 @@ module top #(
       result_cnt <= DIGITS - 1;
     end else if(current_state == Convert & bin_fin) begin
       result_cnt <= bin_ndigits - 1;
-    end else if(current_state == SaveResult && rend_fin) begin
+    end else if(current_state == SaveResult && rend_fin && ~print_comma) begin
       if(result_cnt == 0) result_cnt <= DIGITS - 1;
       else result_cnt <= result_cnt - 1;
     end
@@ -278,6 +317,20 @@ module top #(
     end
   end
 
+  always_ff @(posedge i_CLK) begin
+    if(i_RST) begin
+      print_comma <= 0;
+    end else if(current_state == SaveResult) begin
+      if(rend_ready) begin
+        if(~print_comma && result_cnt == comma_result) begin
+          print_comma <= 1;
+        end else begin
+          print_comma <= 0;
+        end
+      end
+    end
+  end
+
   // oled_renderer
   always_comb begin
     rend_valid = 0;
@@ -292,7 +345,11 @@ module top #(
       end
     end else if(current_state == SaveResult) begin
       if(rend_ready) begin
-        rend_ascii_char = to_ascii(bin_bcd[result_cnt * 4 +: 4]);
+        if(print_comma) begin
+          rend_ascii_char = to_ascii(KEY_COMMA);
+        end else begin
+          rend_ascii_char = to_ascii(bin_bcd[result_cnt * 4 +: 4]);
+        end
         rend_valid = 1;
       end
     end else if(current_state == PrintOp) begin
