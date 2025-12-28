@@ -10,6 +10,7 @@ module oled #(
   input i_INIT,
   input i_VALID,
   output o_READY,
+  output o_FIN,
 
   // memory signals
   input [7:0] i_MEM_DATA,
@@ -150,6 +151,7 @@ module oled #(
   // init fin 
   assign w_init_fin = (r_cmd_cnt == CMD_COUNT - 1);
   assign w_write_fin = (r_mem_addr == (PAGE_COUNT * COL_COUNT));
+  assign o_FIN = w_write_fin;
   assign o_READY = (current_state == WaitValid);   
   assign o_MEM_ADDR = r_mem_addr[NADDR-1:0]; 
 

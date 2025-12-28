@@ -56,46 +56,46 @@ module key_decoder(
     if(i_RST) begin
       o_DECODED <= 4'b0000;
       r_input <= 4'b0000;
-    end if(r_timer_fin) begin
+    end else if(r_timer_fin) begin
       if(r_cols == 4'b0001) begin
-        r_input[0] = |(~i_ROWS);
-        if (i_ROWS == 4'b0111)
+        r_input[0] <= |(~i_ROWS);
+        if(i_ROWS == 4'b1110)
           o_DECODED <= 4'b0001;   //1
-        else if(i_ROWS == 4'b1011) 
-          o_DECODED <= 4'b0100; 	//4
         else if(i_ROWS == 4'b1101) 
+          o_DECODED <= 4'b0100; 	//4
+        else if(i_ROWS == 4'b1011) 
           o_DECODED <= 4'b0111; 	//7
-        else if(i_ROWS == 4'b1110) 
+        else if(i_ROWS == 4'b0111) 
           o_DECODED <= 4'b0000; 	//0
       end else if(r_cols == 4'b0010) begin
-        r_input[1] = |(~i_ROWS);
-        if (i_ROWS == 4'b0111) 
+        r_input[1] <= |(~i_ROWS);
+        if(i_ROWS == 4'b1110)
           o_DECODED <= 4'b0010; 	//2
-        else if(i_ROWS == 4'b1011) 
-          o_DECODED <= 4'b0101; 	//5
         else if(i_ROWS == 4'b1101) 
+          o_DECODED <= 4'b0101; 	//5
+        else if(i_ROWS == 4'b1011) 
           o_DECODED <= 4'b1000; 	//8
-        else if(i_ROWS == 4'b1110) 
+        else if(i_ROWS == 4'b0111) 
           o_DECODED <= 4'b1111; 	//F
       end else if(r_cols == 4'b0100) begin
-        r_input[2] = |(~i_ROWS);
-        if(i_ROWS == 4'b0111) 
+        r_input[2] <= |(~i_ROWS);
+        if(i_ROWS == 4'b1110)
           o_DECODED <= 4'b0011;		//3	
-        else if(i_ROWS == 4'b1011) 
-          o_DECODED <= 4'b0110;		//6
         else if(i_ROWS == 4'b1101) 
+          o_DECODED <= 4'b0110;		//6
+        else if(i_ROWS == 4'b1011) 
           o_DECODED <= 4'b1001;		//9
-        else if(i_ROWS == 4'b1110) 
+        else if(i_ROWS == 4'b0111) 
           o_DECODED <= 4'b1110;		//E
       end else if(r_cols == 4'b1000) begin
-        r_input[3] = |(~i_ROWS);
-        if(i_ROWS == 4'b0111) 
+        r_input[3] <= |(~i_ROWS);
+        if(i_ROWS == 4'b1110)
           o_DECODED <= 4'b1010;   //A
-        else if(i_ROWS == 4'b1011) 
-          o_DECODED <= 4'b1011;   //B
         else if(i_ROWS == 4'b1101) 
+          o_DECODED <= 4'b1011;   //B
+        else if(i_ROWS == 4'b1011) 
           o_DECODED <= 4'b1100;   //C
-        else if(i_ROWS == 4'b1110) 
+        else if(i_ROWS == 4'b0111) 
           o_DECODED <= 4'b1101;   //D
       end
     end

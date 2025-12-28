@@ -1,5 +1,9 @@
 module timer #(
+`ifndef SIMULATION
   parameter CLK_Hz = 100_000_000, // input clock speed in Hz
+`else 
+  parameter CLK_Hz = 1_000
+`endif
   parameter NB = 8 // max delay is 2**NB - 1 ms
 ) (
   input i_CLK, // clock

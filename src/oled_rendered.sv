@@ -1,20 +1,25 @@
-module oled_renderer (
+module oled_renderer #(
+  parameter PAGE_COUNT = 4, 
+  parameter COL_COUNT = 128,
+  parameter NADDR = $clog2(PAGE_COUNT * COL_COUNT)
+) (
   input i_CLK,
   input i_RST,
   
   // input interface
   input [7:0] i_ASCII_CHAR,
   input i_VALID,
-  input [6:0] i_CURSOR,
-  input [1:0] i_PAGE,
+  input [$clog2(COL_COUNT)-1:0] i_CURSOR,
+  input [$clog2(PAGE_COUNT)-1:0] i_PAGE,
   input i_SET_POS,
 
   // output interface 
   output o_READY,
+  output o_FIN,
 
   // oled ram
   output o_RAM_WE,
-  output reg [8:0] o_RAM_ADDR,
+  output reg [NADDR-1:0] o_RAM_ADDR,
   output reg [7:0] o_RAM_DATA
 );
 
@@ -48,7 +53,9 @@ module oled_renderer (
 
   // ram addr
   always_ff @(posedge i_CLK) begin
-    if(i_SET_POS & ~r_busy) begin
+    if(i_RST) begin
+      r_ram_addr <= 0;
+    end else if(i_SET_POS & ~r_busy) begin
       r_ram_addr <= { i_PAGE, 7'b0 } + i_CURSOR;
     end else if (r_busy && r_cnt == 3'h7) begin
       r_ram_addr <= r_ram_addr + 9'h8;
@@ -65,6 +72,7 @@ module oled_renderer (
   end
 
   assign o_READY = ~r_busy;
+  assign o_FIN = (r_cnt == 3'h7);
   assign o_RAM_WE = r_busy;
   assign o_RAM_ADDR = r_ram_addr + r_cnt;
   assign o_RAM_DATA = r_char_rom[r_rom_addr + r_cnt];
