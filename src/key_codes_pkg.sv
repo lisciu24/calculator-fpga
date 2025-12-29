@@ -20,7 +20,7 @@ package key_codes_pkg;
   localparam t_key_code KEY_PLUS  = 4'hC; 
   localparam t_key_code KEY_MINUS = 4'hD; 
   localparam t_key_code KEY_MULT  = 4'hE; 
-  localparam t_key_code KEY_CLEAR = 4'hF; 
+  localparam t_key_code KEY_DIV   = 4'hF; 
 
   function automatic logic is_digit(t_key_code code);
     return (code >= KEY_0 && code <= KEY_9);
@@ -37,6 +37,7 @@ package key_codes_pkg;
       KEY_PLUS: return 8'h2B;
       KEY_MINUS: return 8'h2D;
       KEY_MULT: return 8'h2A;
+      KEY_DIV: return 8'h2F;
 
       default: return 8'h20;
     endcase

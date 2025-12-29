@@ -4,6 +4,7 @@ import key_codes_pkg::*;
 module top #(
   parameter NB = 32,
   parameter NB_FRAC = 0,
+  parameter FRAC_DIGITS = 2,
   parameter COL_COUNT = 128,
   parameter PAGE_COUNT = 4
 ) (
@@ -50,17 +51,22 @@ module top #(
   );
 
   logic [NB-1:0] exec_data_A, exec_data_B, exec_result;
+  e_opcode exec_opcode;
+  logic exec_ovfl, exec_ready, exec_fin, exec_valid; 
   logic [$clog2(DIGITS):0] comma_data_A, comma_data_B, comma_result;
   logic comma_digit;
-  e_opcode exec_opcode;
-  logic exec_ovfl; 
   execution_unit #(
     .NB          (NB),
     .NB_FRAC     (NB_FRAC)
   ) u_execution_unit (
+    .i_CLK       (i_CLK),
+    .i_RST       (i_RST),
+    .i_VALID     (exec_valid),
     .i_DATA_A    (exec_data_A),
     .i_DATA_B    (exec_data_B),
     .i_OPCODE    (exec_opcode),
+    .o_READY     (exec_ready),
+    .o_FIN       (exec_fin),
     .o_RESULT    (exec_result),
     .o_OVFL      (exec_ovfl)
   );
@@ -185,7 +191,6 @@ module top #(
       SaveKey: if(rend_fin) next_state = Decide;
       Decide: begin
         if(is_digit(key_code)) next_state = KeyDigit;
-        else if(key_code == KEY_CLEAR) next_state = KeyClear;
         else if(key_code == KEY_COMMA) next_state = KeyComma;
         else next_state = KeyOp;
       end
@@ -197,7 +202,7 @@ module top #(
       KeyClear: next_state = WaitKey;
       KeyComma: next_state = Flush;
       AlignComma: if(align_fin) next_state = Calc;
-      Calc: next_state = Convert;
+      Calc: if(exec_fin) next_state = Convert;
       Convert: if(bin_fin) next_state = ClearMem;
       ClearMem: next_state = SetResultCursor;
       SetResultCursor: next_state = SaveResult;
@@ -215,6 +220,7 @@ module top #(
       exec_data_A <= 0;
       exec_data_B <= 0;
       exec_opcode <= OP_PASS_A;
+      exec_valid <= 0;
       load_reg <= 0;
       shift_result <= 0;
       next_op <= OP_PASS_A;
@@ -246,6 +252,7 @@ module top #(
         KEY_PLUS: next_op <= OP_ADD;
         KEY_MINUS: next_op <= OP_SUB;
         KEY_MULT: next_op <= OP_MULT;
+        KEY_DIV: next_op <= OP_DIV;
         KEY_EQUAL: next_op <= next_op;
         default: next_op <= OP_PASS_A;
       endcase
@@ -258,10 +265,15 @@ module top #(
         comma_data_A <= comma_data_A + 1;
       end
     end else if(current_state == Calc) begin
-      case(exec_opcode)
-        OP_ADD, OP_SUB: comma_result <= comma_data_A;
-        OP_MULT: comma_result <= comma_data_A << 1;
-      endcase
+      if(exec_ready) begin 
+        exec_valid <= 1;
+        case(exec_opcode)
+          OP_ADD, OP_SUB: comma_result <= comma_data_A;
+          OP_MULT: comma_result <= comma_data_A << 1;
+          OP_DIV: comma_result <= FRAC_DIGITS;
+        endcase
+      end else exec_valid <= 0;
+
       shift_result <= 1;
     end else if(current_state == Convert) begin
       if(shift_result == 1'b1) begin
@@ -277,7 +289,7 @@ module top #(
   always_ff @(posedge i_CLK) begin
     if(i_RST) begin
       result_cnt <= DIGITS - 1;
-    end else if(current_state == Convert & bin_fin) begin
+    end else if(current_state == Convert && bin_fin) begin
       result_cnt <= bin_ndigits - 1;
     end else if(current_state == SaveResult && rend_fin && ~print_comma) begin
       if(result_cnt == 0) result_cnt <= DIGITS - 1;
