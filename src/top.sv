@@ -10,6 +10,7 @@ module top #(
 ) (
   input i_CLK,
   input i_RST,
+  input i_CLEAR,
   // key decoder
   input [3:0] i_ROWS,
   output [3:0] o_COLS,
@@ -71,6 +72,7 @@ module top #(
     .o_OVFL      (exec_ovfl)
   );
 
+  logic [NB-1:0] bin_bin;
   logic bin_valid, bin_ready, bin_fin;
   logic [DIGITS*4-1:0] bin_bcd;
   logic [$clog2(DIGITS)-1:0] bin_ndigits;
@@ -80,7 +82,7 @@ module top #(
   ) u_bin_to_bcd (
     .i_CLK      (i_CLK),
     .i_RST      (i_RST),
-    .i_BIN      (exec_result),
+    .i_BIN      (bin_bin),
     .i_VALID    (bin_valid),
     .o_READY    (bin_ready),
     .o_FIN      (bin_fin),
@@ -160,8 +162,10 @@ module top #(
     AlignComma,
     Calc,
     Convert,
+    CheckSign,
     ClearMem,
     SetResultCursor,
+    SaveSign,
     SaveResult,
     ResetCursor,
     SaveKey,
@@ -187,10 +191,11 @@ module top #(
     next_state = current_state;
     case(current_state)
       Init: if(oled_ready) next_state = WaitKey; 
-      WaitKey: if(key_valid) next_state = SaveKey;
+      WaitKey: if(key_valid || i_CLEAR) next_state = SaveKey;
       SaveKey: if(rend_fin) next_state = Decide;
       Decide: begin
-        if(is_digit(key_code)) next_state = KeyDigit;
+        if(i_CLEAR) next_state = KeyClear; 
+        else if(is_digit(key_code)) next_state = KeyDigit;
         else if(key_code == KEY_COMMA) next_state = KeyComma;
         else next_state = KeyOp;
       end
@@ -199,13 +204,15 @@ module top #(
         if(load_reg == 1'b1) next_state = AlignComma;
         else next_state = Flush;
       end
-      KeyClear: next_state = WaitKey;
+      KeyClear: next_state = Flush;
       KeyComma: next_state = Flush;
       AlignComma: if(align_fin) next_state = Calc;
-      Calc: if(exec_fin) next_state = Convert;
+      Calc: if(exec_fin) next_state = CheckSign;
+      CheckSign: next_state = Convert;
       Convert: if(bin_fin) next_state = ClearMem;
       ClearMem: next_state = SetResultCursor;
-      SetResultCursor: next_state = SaveResult;
+      SetResultCursor: next_state = SaveSign;
+      SaveSign: if(rend_fin) next_state = SaveResult;
       SaveResult: if(rend_fin && result_cnt == 0) next_state = ResetCursor;
       ResetCursor: next_state = PrintOp;
       PrintOp: if(rend_fin) next_state = Flush;
@@ -216,7 +223,7 @@ module top #(
 
   // execution_unit
   always_ff @(posedge i_CLK) begin
-    if(i_RST) begin
+    if(i_RST || current_state == KeyClear) begin
       exec_data_A <= 0;
       exec_data_B <= 0;
       exec_opcode <= OP_PASS_A;
@@ -275,6 +282,9 @@ module top #(
       end else exec_valid <= 0;
 
       shift_result <= 1;
+    end else if(current_state == CheckSign) begin
+      if(exec_result[NB-1]) bin_bin <= ~(exec_result) + 1;
+      else bin_bin <= exec_result;
     end else if(current_state == Convert) begin
       if(shift_result == 1'b1) begin
         exec_data_A <= exec_result;
@@ -287,7 +297,7 @@ module top #(
 
   // result counter
   always_ff @(posedge i_CLK) begin
-    if(i_RST) begin
+    if(i_RST || current_state == KeyClear) begin
       result_cnt <= DIGITS - 1;
     end else if(current_state == Convert && bin_fin) begin
       result_cnt <= bin_ndigits - 1;
@@ -303,7 +313,7 @@ module top #(
     bcd_clear = 0;
     if(current_state == KeyDigit) begin
       bcd_valid = 1;
-    end else if(current_state == KeyOp) begin
+    end else if(current_state == KeyOp || current_state == KeyClear) begin
       bcd_clear = 1;
     end
   end
@@ -320,21 +330,21 @@ module top #(
   always_comb begin 
     mem_clear = 0;
     mem_addr = 0;
-    if(current_state == SaveKey || current_state == SaveResult || current_state == PrintOp) begin
+    if(current_state == SaveKey || current_state == SaveResult || current_state == PrintOp || current_state == SaveSign) begin
       mem_addr = rend_mem_addr;
     end else if(current_state == Flush) begin
       mem_addr = oled_mem_addr;
-    end else if(current_state == ClearMem) begin
+    end else if(current_state == ClearMem || current_state == KeyClear) begin
       mem_clear = 1;
     end
   end
 
   always_ff @(posedge i_CLK) begin
-    if(i_RST) begin
+    if(i_RST || current_state == KeyClear) begin
       print_comma <= 0;
     end else if(current_state == SaveResult) begin
       if(rend_ready) begin
-        if(~print_comma && result_cnt == comma_result) begin
+        if(~print_comma && result_cnt == comma_result && result_cnt != 0) begin
           print_comma <= 1;
         end else begin
           print_comma <= 0;
@@ -355,6 +365,12 @@ module top #(
         rend_ascii_char = to_ascii(key_code);
         rend_valid = 1;
       end
+    end else if(current_state == SaveSign) begin
+      if(rend_ready) begin
+        if(exec_result[NB-1]) rend_ascii_char = to_ascii(KEY_MINUS);
+        else rend_ascii_char = 8'h20;
+        rend_valid = 1;
+      end
     end else if(current_state == SaveResult) begin
       if(rend_ready) begin
         if(print_comma) begin
@@ -372,7 +388,7 @@ module top #(
     end else if(current_state == SetResultCursor) begin
       rend_page = PAGE_COUNT - 1;
       rend_set_pos = 1;
-    end else if(current_state == ResetCursor) begin
+    end else if(current_state == ResetCursor || current_state == KeyClear) begin
       rend_set_pos = 1;
     end
   end
