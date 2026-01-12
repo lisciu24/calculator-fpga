@@ -27,7 +27,7 @@ module oled #(
   output o_SPI_MOSI
 );
 
-  localparam CMD_COUNT = 25;
+  localparam CMD_COUNT = 27;
   localparam NCMD = $clog2(CMD_COUNT);
 
   // 2 bit cmd type and 8 bit command
@@ -46,18 +46,20 @@ module oled #(
     10'h0F1, // SPI phase 1 - 15 DCLK, phase 2 - 1 DCLK
     10'h120, // VBAT = 0
     10'h264, // delay 100ms
+    10'h0A7, // SPI inverse display mode
     10'h081, // SPI set contrast >
     10'h00F, // SPI 15 / 255
     10'h0A1, // SPI set segment remap, column address 127 is mapped to SEG0
     10'h0C8, // SPI set COM output scan direction, remapped mode
     10'h0DA, // SPI set COM pins hardware configuration >
     10'h022, // SPI sequential COM pin configuration, enable COM left/right remap
-    10'h020, // SPI set memory addressing mode >
-    10'h000, // SPI horizontal addressing mode
     10'h022, // SPI set page address >
     10'h000, // SPI start page address 00 >
     10'h00 + PAGE_COUNT - 1, // SPI end page address
-    10'h0AF  // SPI display on
+    10'h0AF,  // SPI display on
+    10'h020, // SPI set memory addressing mode >
+    10'h000, // SPI horizontal addressing mode
+    10'h18F,  // DC = 1
   };
   
   reg [1:0] r_cmd_type; // 0 -> spi / 1 -> signal
@@ -158,8 +160,8 @@ module oled #(
   // cmd 
   always_ff @(posedge i_CLK) begin
     if(i_RST) begin
-      r_ccmd <= 0;
-      r_cmd_type <= 0;
+      r_cmd_type <= CMD_INIT_SEQ[0][9:8];
+      r_ccmd <= CMD_INIT_SEQ[0][7:0];
       r_cmd_cnt <= 0;
     end else if(current_state == NextInit) begin
       r_cmd_type <= CMD_INIT_SEQ[r_cmd_cnt + 1][9:8];
