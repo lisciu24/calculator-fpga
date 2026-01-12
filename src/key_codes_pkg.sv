@@ -15,12 +15,12 @@ package key_codes_pkg;
   localparam t_key_code KEY_9     = 4'h9;
   
   // comands 
-  localparam t_key_code KEY_COMMA = 4'hA; 
-  localparam t_key_code KEY_EQUAL = 4'hB; 
-  localparam t_key_code KEY_PLUS  = 4'hC; 
-  localparam t_key_code KEY_MINUS = 4'hD; 
-  localparam t_key_code KEY_MULT  = 4'hE; 
-  localparam t_key_code KEY_DIV   = 4'hF; 
+  localparam t_key_code KEY_COMMA = 4'hF; 
+  localparam t_key_code KEY_EQUAL = 4'hE; 
+  localparam t_key_code KEY_PLUS  = 4'hA; 
+  localparam t_key_code KEY_MINUS = 4'hB; 
+  localparam t_key_code KEY_MULT  = 4'hC; 
+  localparam t_key_code KEY_DIV   = 4'hD; 
 
   function automatic logic is_digit(t_key_code code);
     return (code >= KEY_0 && code <= KEY_9);
