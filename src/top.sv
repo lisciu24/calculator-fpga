@@ -217,7 +217,7 @@ module top #(
       ResetCursor: next_state = PrintOp;
       PrintOp: if(rend_fin) next_state = Flush;
       Flush: if(oled_fin) next_state = WaitKey; 
-      default: next_state = WaitKey;
+      default: next_state = Init;
     endcase
   end
 
@@ -300,7 +300,8 @@ module top #(
     if(i_RST || current_state == KeyClear) begin
       result_cnt <= DIGITS - 1;
     end else if(current_state == Convert && bin_fin) begin
-      result_cnt <= bin_ndigits - 1;
+      if(bin_ndigits < comma_result) result_cnt <= comma_result;
+      else result_cnt <= bin_ndigits - 1;
     end else if(current_state == SaveResult && rend_fin && ~print_comma) begin
       if(result_cnt == 0) result_cnt <= DIGITS - 1;
       else result_cnt <= result_cnt - 1;

@@ -64,7 +64,7 @@ module oled #(
   
   reg [1:0] r_cmd_type; // 0 -> spi / 1 -> signal
   reg [7:0] r_ccmd;
-  reg [NCMD-1:0] r_cmd_cnt;
+  reg [NCMD:0] r_cmd_cnt;
   
   // power
   reg [3:0] r_power;
@@ -151,10 +151,10 @@ module oled #(
   end
   
   // init fin 
-  assign w_init_fin = (r_cmd_cnt == CMD_COUNT - 1);
+  assign w_init_fin = (r_cmd_cnt == CMD_COUNT);
   assign w_write_fin = (r_mem_addr == (PAGE_COUNT * COL_COUNT));
   assign o_FIN = w_write_fin;
-  assign o_READY = (current_state == WaitValid);   
+  assign o_READY = (current_state == WaitValid); 
   assign o_MEM_ADDR = r_mem_addr[NADDR-1:0]; 
 
   // cmd 
@@ -162,10 +162,10 @@ module oled #(
     if(i_RST) begin
       r_cmd_type <= CMD_INIT_SEQ[0][9:8];
       r_ccmd <= CMD_INIT_SEQ[0][7:0];
-      r_cmd_cnt <= 0;
+      r_cmd_cnt <= 1;
     end else if(current_state == NextInit) begin
-      r_cmd_type <= CMD_INIT_SEQ[r_cmd_cnt + 1][9:8];
-      r_ccmd <= CMD_INIT_SEQ[r_cmd_cnt + 1][7:0];
+      r_cmd_type <= CMD_INIT_SEQ[r_cmd_cnt][9:8];
+      r_ccmd <= CMD_INIT_SEQ[r_cmd_cnt][7:0];
       r_cmd_cnt <= r_cmd_cnt + 1;
     end else if(current_state == Write) begin
       r_ccmd <= i_MEM_DATA;
