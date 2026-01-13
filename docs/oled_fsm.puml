@@ -1,0 +1,39 @@
+@startuml oled_fsm
+
+[*] --> RESET : i_RST
+
+RESET : set first init cmd 
+RESET --> WaitInit
+
+WaitInit --> Decision : i_INIT
+
+Decision --> Spi : r_cmd_type = 00b
+Decision --> Power : r_cmd_type = 01b
+Decision --> Delay : r_cmd_type = 10b
+
+Spi : write data to SPI
+Spi --> Check : r_spi_fin
+
+Power : change power pins
+Power --> Check 
+
+Delay : start timer
+Delay --> Check : r_delay_fin
+
+Check --> NextInit : \~w_init_fin 
+Check --> WaitValid : w_init_fin & w_write_fin 
+Check --> Write : w_init_fin & \~w_write_fin
+
+NextInit : set next init cmd
+NextInit : increase init cmd counter
+NextInit  --> Decision
+
+WaitValid : set r_mem_addr to 0
+WaitValid : set r_cmd_type to 00b (spi)
+WaitValid --> Write : i_VALID
+
+Write : r_mem_addr++
+Write : set r_ccmd
+Write --> Spi
+
+@enduml

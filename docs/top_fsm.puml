@@ -1,0 +1,66 @@
+@startuml top_fsm
+
+[*] --> Init
+
+Init --> WaitKey : oled_ready
+
+WaitKey --> SaveKey : key_valid | i_CLEAR
+
+SaveKey : save pressed key to memory
+SaveKey --> Decide : rend_fin
+
+Decide --> KeyClear : i_CLEAR
+Decide --> KeyDigit : is_digit(key_code)
+Decide --> KeyComma : key_code == KEY_COMMA
+Decide --> KeyOp
+
+KeyDigit : update bcd_bin
+KeyDigit : update comma place if \n in comma digit mode
+KeyDigit --> Flush
+
+KeyOp : store bin number in register A or B
+KeyOp : clear bcd_to_bin 
+KeyOp --> AlignComma : load_reg == 1b (loaded into B register)
+KeyOp --> Flush : load_reg == 0b (loaded into A register)
+
+KeyClear : clear alu registers
+KeyClear : clear oled memory
+KeyClear --> Flush
+
+KeyComma : go into comma digit mode
+KeyComma --> Flush
+
+AlignComma : align A and B registers according to comma
+AlignComma --> Calc : align_fin
+
+Calc : run alu 
+Calc --> CheckSign : exec_fin
+
+CheckSign : set absolute value of alu result \n to convert in bin_to_bcd 
+CheckSign --> Convert
+
+Convert : run bin_to_bcd
+Convert --> ClearMem : bin_fin
+
+ClearMem : clear oled memory
+ClearMem --> SetResultCursor
+
+SetResultCursor : set result cursor to last page
+SetResultCursor --> SaveSign
+
+SaveSign : save alu result sign to oled memory
+SaveSign --> SaveResult : rend_fin
+
+SaveResult : save alu result to oled memory
+SaveResult --> ResetCursor : rend_fin && result_cnt == 0
+
+ResetCursor : set result cursor to 0,0
+ResetCursor --> PrintOp
+
+PrintOp : save op to oled memory
+PrintOp --> Flush : rend_fin
+
+Flush : send memory contents over spi to oled
+Flush --> WaitKey : oled_fin
+
+@enduml
